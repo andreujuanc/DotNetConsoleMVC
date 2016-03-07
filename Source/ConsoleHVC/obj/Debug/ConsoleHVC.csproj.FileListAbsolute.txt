@@ -1,0 +1,5 @@
+C:\Proyectos Web\Main\TakoDeploy\Source\ConsoleHVC\bin\Debug\ConsoleHVC.dll
+C:\Proyectos Web\Main\TakoDeploy\Source\ConsoleHVC\bin\Debug\ConsoleHVC.pdb
+C:\Proyectos Web\Main\TakoDeploy\Source\ConsoleHVC\obj\Debug\ConsoleHVC.csprojResolveAssemblyReference.cache
+C:\Proyectos Web\Main\TakoDeploy\Source\ConsoleHVC\obj\Debug\ConsoleHVC.dll
+C:\Proyectos Web\Main\TakoDeploy\Source\ConsoleHVC\obj\Debug\ConsoleHVC.pdb
