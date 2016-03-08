@@ -1,4 +1,5 @@
 ﻿using ConsoleHVC;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -6,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
+using System.Xml;
 
 namespace ConsoleHVC
 {
@@ -14,11 +15,28 @@ namespace ConsoleHVC
     {
         private string _dataFile = null;
         private bool _isConfigured = false;
+
         private string DataFile { get { return _dataFile; } set { _dataFile = value; LoadFile(); } }
-        private dynamic StoredObject { get; set; }
+        private Storage StoredObject { get; set; } = new Storage();
 
+        public abstract void OnConfiguring(ConsoleDbContextOptions options);
 
-        private void LoadFile()
+        internal void Configure()
+        {
+            try
+            {
+                _isConfigured = true;
+                var options = new ConsoleDbContextOptions();
+                OnConfiguring(options);
+                if (options.DataFile == null) throw new InvalidOperationException("Context Datafile cannot be null");
+                DataFile = options.DataFile;
+            }
+            catch
+            {
+                _isConfigured = false;
+            }
+        }
+        private void CheckFile()
         {
             if (!File.Exists(DataFile))
             {
@@ -30,62 +48,83 @@ namespace ConsoleHVC
                 }
                 catch
                 {
-                    if(cfs!=null) cfs.Close();
-                }   
-            }
-            using (var fs = File.OpenRead(DataFile))
-            {
-                XmlSerializer ser = null;
-                try
-                {
-                    ser = new System.Xml.Serialization.XmlSerializer(typeof(ExpandoObject));
-                    StoredObject = ser.Deserialize(fs) as ExpandoObject;
-                }
-                catch
-                {
-                    StoredObject = new ExpandoObject();
-                }
-                finally
-                {
-                    ser = null;
+                    if (cfs != null) cfs.Close();
                 }
             }
         }
 
-        internal void Configure()
+        private void LoadFile()
         {
-            var options = new ConsoleDbContextOptions();
-            OnConfiguring(options);
-            if (options.DataFile == null) throw new InvalidOperationException("Context Datafile cannot be null");
-            DataFile = options.DataFile;
-            _isConfigured = true;
+            CheckConfigure();
+            CheckFile();
+            using (var fs = File.OpenText(DataFile))
+            {
+                try
+                {
+                    StoredObject =  JsonConvert.DeserializeObject<Storage>(fs.ReadToEnd());
+                }
+                catch
+                {
+                    StoredObject = new Storage();
+                }
+            }
         }
-        public abstract void OnConfiguring(ConsoleDbContextOptions options);
+
         public void SaveChanges()
         {
-            
+            CheckConfigure();
+            CheckFile();
+            try
+            {
+
+                var fileContent = JsonConvert.SerializeObject(StoredObject);
+                File.WriteAllText(DataFile, fileContent);
+
+            }
+            finally
+            {
+
+            }
+        }
+
+        private void CheckConfigure()
+        {
+            if (!_isConfigured) Configure();
         }
 
         protected T Get<T>()
         {
-            if (!_isConfigured) Configure();
+            CheckConfigure();
             var PropertyName = typeof(T).Name;
-            var tmp = StoredObject as IDictionary<String, object>;
-            //var property = StoredObject.GetType().GetProperty(typeof(T).Name);
+            
 
-            if (!tmp.ContainsKey(PropertyName))
+            if (!StoredObject.ContainsKey(PropertyName))
             {
-                tmp.Add(PropertyName, Activator.CreateInstance<T>());
-                //StoredObject = tmp;
-                //property = StoredObject.GetType().GetProperty(typeof(T).Name);
+                StoredObject.Add(PropertyName, Activator.CreateInstance<T>());
             }
-            //StoredObject.GetType().GetProperties
-            //return (T)property.GetValue(StoredObject);
-            return (T)tmp[PropertyName];
+            
+            
+            return (T)StoredObject[PropertyName];
         }
-        private class ConsoleDbDataStorage 
+        protected void Set<T>(object value)
         {
+            CheckConfigure();
+            var PropertyName = typeof(T).Name;
+            
+            if (!StoredObject.ContainsKey(PropertyName))
+            {
+                StoredObject.Add(PropertyName, value);
+            }
+            else
+            {
+                StoredObject[PropertyName] = value;
+            }
+        }
 
+        [Serializable]
+        private class Storage : Dictionary<string, object>
+        {
+            
         }
     }
 }
