@@ -12,7 +12,7 @@ namespace Testing
         static void Main(string[] args)
         {
             var db = new TestContext();
-            db.SomeReferenceProperty.ID.ToString();
+            if(db.SomeReferenceProperty != null) db.SomeReferenceProperty.ID.ToString();
             db.SomeReferenceProperty = new SomeClass() { ID = 99 };
             db.SaveChanges();
         }

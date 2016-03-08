@@ -61,11 +61,15 @@ namespace ConsoleHVC
             {
                 try
                 {
-                    StoredObject =  JsonConvert.DeserializeObject<Storage>(fs.ReadToEnd());
+                    StoredObject = JsonConvert.DeserializeObject<Storage>(fs.ReadToEnd());
                 }
                 catch
                 {
                     StoredObject = new Storage();
+                }
+                finally
+                {
+                    if (StoredObject == null) StoredObject = new Storage();
                 }
             }
         }
@@ -95,6 +99,7 @@ namespace ConsoleHVC
         protected T Get<T>()
         {
             CheckConfigure();
+            if (StoredObject == null) return default(T);
             var PropertyName = typeof(T).Name;
             
 
@@ -102,9 +107,14 @@ namespace ConsoleHVC
             {
                 StoredObject.Add(PropertyName, Activator.CreateInstance<T>());
             }
-            
-            
-            return (T)StoredObject[PropertyName];
+            object value = StoredObject[PropertyName];
+            if (value is Newtonsoft.Json.Linq.JObject)
+            {
+                value = ((Newtonsoft.Json.Linq.JObject)value).ToObject<T>();
+            }
+            StoredObject[PropertyName] = value;
+
+            return (T)value;
         }
         protected void Set<T>(object value)
         {
@@ -124,7 +134,7 @@ namespace ConsoleHVC
         [Serializable]
         private class Storage : Dictionary<string, object>
         {
-            
+           
         }
     }
 }
